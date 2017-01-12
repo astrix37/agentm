@@ -6,7 +6,6 @@ class MinecraftServer:
 
 	def get_ops(self):
 		ops = json.loads(open(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "ops.json")).read())
-
 		for op in ops:
 			del op['uuid']
 		return ops
@@ -16,19 +15,13 @@ class MinecraftServer:
 		data = json.loads(data)
 		return data
 
-
 	def get_properties(self):
-		properties = []
-		raw = open(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "server.properties")).readlines()
-		for prop in raw:
-			properties.append(prop.replace("\n", ""))
-		return properties
-		
-
+		return open(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "server.properties")).readlines()
+				
 	def get_latest_forge_log(self):
 		fml_activity = open(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "logs", "fml-server-latest.log")).readlines()
-		if len(fml_activity) > 50:
-			fml_activity = fml_activity[-50:]
+		if len(fml_activity) > 200:
+			fml_activity = fml_activity[-200:]
 		return fml_activity
 
 	def get_latest_log(self):
