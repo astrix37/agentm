@@ -80,7 +80,7 @@ def command():
         command_string = request.form['command']
         command = command_string.split(' ')
 
-        if not command in app.config['VALID_COMMANDS']:
+        if not command[0] in app.config['VALID_COMMANDS']:
             return "This command is not allowed", 403
 
         options = ClientOptions()
