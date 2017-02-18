@@ -95,7 +95,7 @@ def command():
         print command_string
         sys.stdout = sys.__stdout__
 
-        return {"status": "success", "command": command_string}, 200
+        return jsonify({"status": "success", "command": command_string}), 200
     except Exception as ex:
         return "Unable to execute command: {}".format(ex), 500
 
