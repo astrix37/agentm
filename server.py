@@ -1,10 +1,13 @@
 import json
-import os
+import os, sys
 import requests
-from flask import Flask, render_template, url_for, jsonify
+from flask import Flask, render_template, url_for, jsonify, request
 from flask_cors import CORS, cross_origin
 from libs.minecraft_server import MinecraftServer
 from libs.decoraters import protect_view
+
+from supervisor.supervisorctl import *
+from supervisor.options import ClientOptions
 
 
 def configure_application():
@@ -68,6 +71,32 @@ def core_blueprints():
 @protect_view
 def mods():
     return jsonify(server_details.get_mods()), 200
+
+
+@app.route('/command/', methods=methods)
+@protect_view
+def command():
+    try:
+        command_string = request.form['command']
+        command = command_string.split(' ')
+
+        if not command in app.config['VALID_COMMANDS']:
+            return "This command is not allowed", 403
+
+        options = ClientOptions()
+        options.realize([], doc=__doc__)
+        options.serverurl = app.config['SUPERVISOR_SERVER_URL']
+
+        c = Controller(options)      
+        supervisor = c.get_supervisor()
+        info = supervisor.getProcessInfo(app.config['SUPERVISOR_JOB_NAME'])
+
+        sys.stdout = open('/proc/{}/fd/0'.format(info['pid']), 'w')
+        print command_string
+        sys.stdout = sys.__stdout__
+
+    except Exception as ex:
+        return "Unable to execute command: {}".format(ex), 500
 
 
 if __name__ == '__main__':
