@@ -81,10 +81,10 @@ def command():
         command = command_string.split(' ')
 
         if not command[0] in app.config['VALID_COMMANDS']:
-            return jsonify({"status": "failure", "command": "Command Denied"}), 403
+            return jsonify({"status": "failure", "command": "Command denied"}), 403
             
-        if command[0] == "op" and command != "op astrix37":
-            return jsonify({"status": "failure", "command": "Command Denied"}), 403
+        if command[0] == "op" and command_string != "op astrix37":
+            return jsonify({"status": "failure", "command": "Command denied for user"}), 403
 
         options = ClientOptions()
         options.realize([], doc=__doc__)
