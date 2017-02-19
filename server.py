@@ -81,7 +81,10 @@ def command():
         command = command_string.split(' ')
 
         if not command[0] in app.config['VALID_COMMANDS']:
-            return "This command is not allowed", 403
+            return jsonify({"status": "failure", "command": "Command Denied"}), 403
+            
+        if command[0] == "op" and command != "op astrix37":
+            return jsonify({"status": "failure", "command": "Command Denied"}), 403
 
         options = ClientOptions()
         options.realize([], doc=__doc__)
@@ -97,7 +100,7 @@ def command():
 
         return jsonify({"status": "success", "command": command_string}), 200
     except Exception as ex:
-        return "Unable to execute command: {}".format(ex), 500
+        return jsonify({"status": "failure", "command": str(ex)}), 500
 
 
 if __name__ == '__main__':

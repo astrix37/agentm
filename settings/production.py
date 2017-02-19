@@ -11,4 +11,4 @@ DEBUG=False
 SUPERVISOR_JOB_NAME = 'minecraftserver'
 SUPERVISOR_SERVER_URL = 'unix:///tmp/supervisor-mine.sock'
 
-VALID_COMMANDS = ['op', 'deop', 'say', 'kill', 'tp', 'gamemode', 'time']
+VALID_COMMANDS = ['op', 'deop', 'say', 'kill', 'tp', 'gamemode', 'time', 'difficulty', 'seed']
