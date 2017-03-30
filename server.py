@@ -9,8 +9,8 @@ from flask_cors import CORS, cross_origin
 from libs.minecraft_server import MinecraftServer
 from libs.decoraters import protect_view
 
-#rom supervisor.supervisorctl import *
-#rom supervisor.options import ClientOptions
+from supervisor.supervisorctl import *
+from supervisor.options import ClientOptions
 
 logging.basicConfig(format='%(asctime)s - %(name)-12s - %(levelname)-8s - %(message)s')
 logger = logging.getLogger(__name__)
