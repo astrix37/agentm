@@ -75,6 +75,16 @@ def core_blueprints():
     return jsonify(server_details.get_core_blueprints()), 200
 
 
+@app.route('/list-logs/', methods=methods)
+@protect_view
+def list_logs():
+
+    logs = {
+        'latest-server-log': 'general-log'
+    }
+
+    return jsonify(server_details.get_core_blueprints()), 200
+
 @app.route('/forge-mods/', methods=methods)
 @protect_view
 def mods():
