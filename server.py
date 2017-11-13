@@ -78,12 +78,27 @@ def core_blueprints():
 @app.route('/list-logs/', methods=methods)
 @protect_view
 def list_logs():
+    try:
+        return jsonify({'result': server_details.list_logs()}), 200
+    except Exception as ex:
+        return jsonify({'result': ex}), 500
 
-    logs = {
-        'latest-server-log': 'general-log'
-    }
+@app.route('/get-log/', methods=methods)
+@protect_view
+def get_log():
 
-    return jsonify(logs), 200
+    try:
+        logs = server_details.list_logs()
+        log_file = request.form['log_file']
+
+        if log_file in logs:
+            return jsonify({'result': server_details.get_log(log_file)}), 200
+        else:
+            return jsonify({"result": "log_file_not_found"}), 404
+        
+    except Exception as ex:
+        return jsonify({'result': ex}), 500
+
 
 @app.route('/forge-mods/', methods=methods)
 @protect_view

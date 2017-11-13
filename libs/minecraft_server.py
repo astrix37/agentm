@@ -35,3 +35,9 @@ class MinecraftServer:
 
 	def get_mods(self):
 		return next(os.walk(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")))[2]
+
+	def list_logs(self):
+		return next(os.walk(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "logs")))[2]
+
+	def get_log(self, logfile):
+		return open(os.path.join(app.config['L4D2_SERVER_LOCATION'], "left4dead2", "logs", logfile)).readlines()
