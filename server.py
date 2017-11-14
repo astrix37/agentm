@@ -28,11 +28,103 @@ app = configure_application()
 server_details = MinecraftServer()
 methods = app.config['API_METHODS']
 
+
 @app.route('/')
 def home():
     var = {}
     return render_template("index.html", title="Oh, hello", **var)
 
+
+#Standard View 1
+@app.route('/install-mod/', methods=methods)
+@protect_view
+def install():
+    file = request.form['mod']
+    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
+    file_path = os.path.join(mod_folder, file)
+
+    logger.info("A request has come in to install {}".format(file))
+
+    try:
+        if os.path.exists(file_path):
+            logger.info("A file by this name already exists. No action taken.")
+            return jsonify({"status": "file_already_exists"}), 409
+        else:
+            logger.info("Now downloading {}...".format(file))
+            target = '{}/mods/{}'.format(app.config['DOWNLOAD_LOCATION'], file)
+            logger.info("Target is {}".format(target))
+            response = requests.get(target, verify=False, timeout=5)
+
+            with open(file_path, 'wb') as handle:
+                handle.write(response.content)
+
+            logger.info("Successfully installed")
+            return jsonify({"result": "file_installed"}), 200
+    except Exception as ex:
+        logger.info("An error has occured during installation: {}".format(ex))
+        return jsonify({"result": "an_error_as_occured"}), 500
+        
+
+#Standard View 2
+@app.route('/remove-mod/', methods=methods)
+@protect_view
+def remove():
+    file = request.form['mod']
+    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
+    file_path = os.path.join(mod_folder, file)
+
+    logger.info("A request has come in to remove {}".format(file))
+
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            logger.info("This mod did exist. It has now been removed")
+            return jsonify({"result": "file_removed"}), 200
+
+        logger.info("This mod does not exist. No action taken")
+        return jsonify({"result": "file_not_present"}), 404
+    except Exception as ex:
+
+        logger.info("An error has occured during removal: {}".format(ex))
+        return jsonify({"result": "an_error_has_occured"}), 500
+
+
+#Standard View 3
+@app.route('/list-mods/', methods=methods)
+@protect_view
+def mods():
+    return jsonify(server_details.get_mods()), 200
+
+
+#Standard View 4
+@app.route('/list-logs/', methods=methods)
+@protect_view
+def list_logs():
+    try:
+        return jsonify({'result': server_details.list_logs()}), 200
+    except Exception as ex:
+        return jsonify({'result': str(ex)}), 500
+
+
+#Standard View 5
+@app.route('/get-log/', methods=methods)
+@protect_view
+def get_log():
+
+    try:
+        logs = server_details.list_logs()
+        log_file = request.form['log_file']
+   
+        if log_file in logs:
+            return jsonify({'result': server_details.get_log(log_file)}), 200
+        else:
+            return jsonify({"result": "log_file_not_found"}), 404
+        
+    except Exception as ex:
+        return jsonify({'result': str(ex)}), 500
+
+
+##Additional Views Specific to Minecraft
 @app.route('/ops/', methods=methods)
 @protect_view
 def ops():
@@ -73,89 +165,6 @@ def blueprints():
 @protect_view
 def core_blueprints():
     return jsonify(server_details.get_core_blueprints()), 200
-
-
-@app.route('/list-logs/', methods=methods)
-@protect_view
-def list_logs():
-    try:
-        return jsonify({'result': server_details.list_logs()}), 200
-    except Exception as ex:
-        return jsonify({'result': str(ex)}), 500
-
-@app.route('/get-log/', methods=methods)
-@protect_view
-def get_log():
-
-    try:
-        logs = server_details.list_logs()
-        log_file = request.form['log_file']
-   
-        if log_file in logs:
-            return jsonify({'result': server_details.get_log(log_file)}), 200
-        else:
-            return jsonify({"result": "log_file_not_found"}), 404
-        
-    except Exception as ex:
-        return jsonify({'result': str(ex)}), 500
-
-
-@app.route('/forge-mods/', methods=methods)
-@protect_view
-def mods():
-    return jsonify(server_details.get_mods()), 200
-
-
-@app.route('/install-mod/', methods=methods)
-@protect_view
-def install():
-    file = request.form['mod']
-    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
-    file_path = os.path.join(mod_folder, file)
-
-    logger.info("A request has come in to install {}".format(file))
-
-    try:
-        if os.path.exists(file_path):
-            logger.info("A file by this name already exists. No action taken.")
-            return jsonify({"status": "file_already_exists"}), 409
-        else:
-            logger.info("Now downloading {}...".format(file))
-            target = '{}/mods/{}'.format(app.config['DOWNLOAD_LOCATION'], file)
-            logger.info("Target is {}".format(target))
-            response = requests.get(target, verify=False, timeout=5)
-
-            with open(file_path, 'wb') as handle:
-                handle.write(response.content)
-
-            logger.info("Successfully installed")
-            return jsonify({"status": "file_installed"}), 200
-    except Exception as ex:
-        logger.info("An error has occured during installation: {}".format(ex))
-        return jsonify({"status": "an_error_as_occured"}), 500
-        
-
-@app.route('/remove-mod/', methods=methods)
-@protect_view
-def remove():
-    file = request.form['mod']
-    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
-    file_path = os.path.join(mod_folder, file)
-
-    logger.info("A request has come in to remove {}".format(file))
-
-    try:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            logger.info("This mod did exist. It has now been removed")
-            return jsonify({"status": "file_removed"}), 200
-
-        logger.info("This mod does not exist. No action taken")
-        return jsonify({"status": "file_not_present"}), 404
-    except Exception as ex:
-
-        logger.info("An error has occured during removal: {}".format(ex))
-        return jsonify({"status": "an_error_has_occured"}), 500
 
 
 @app.route('/command/', methods=methods)
