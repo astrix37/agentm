@@ -93,7 +93,7 @@ def remove():
 @app.route('/list-mods/', methods=methods)
 @protect_view
 def mods():
-    return jsonify(server_details.get_mods()), 200
+    return jsonify({'result': server_details.get_mods()}), 200
 
 
 #Standard View 4
