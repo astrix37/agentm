@@ -66,7 +66,7 @@ def install():
             return jsonify({"result": "{} has successfully been installed".format(file)}), 200
     except Exception as ex:
         logger.info("An error has occured during installation: {}".format(ex))
-        return jsonify({"result": ex}), 500
+        return jsonify({"result": str(ex)}), 500
         
 
 #Standard View 2
@@ -92,7 +92,7 @@ def remove():
     except Exception as ex:
 
         logger.info("An error has occured during removal: {}".format(ex))
-        return jsonify({"result": ex}), 500
+        return jsonify({"result": str(ex)}), 500
 
 
 #Standard View 3
