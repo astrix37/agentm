@@ -1,7 +1,9 @@
+import boto3
 import json
-import os, sys
-import requests
 import logging
+import os
+import requests
+import sys
 
 from logging import FileHandler 
 from flask import Flask, render_template, url_for, jsonify, request
@@ -9,8 +11,8 @@ from flask_cors import CORS, cross_origin
 from libs.minecraft_server import MinecraftServer
 from libs.decoraters import protect_view
 
-from supervisor.supervisorctl import *
-from supervisor.options import ClientOptions
+#from supervisor.supervisorctl import *
+#from supervisor.options import ClientOptions
 
 logging.basicConfig(format='%(asctime)s - %(name)-12s - %(levelname)-8s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -41,28 +43,30 @@ def home():
 def install():
     file = request.form['mod']
     mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
-    file_path = os.path.join(mod_folder, file)
+    file_name = file[file.rfind('/') + 1:]
+    file_path = os.path.join(mod_folder, file_name)
 
-    logger.info("A request has come in to install {}".format(file))
+    logger.info("A request has come in to install {}".format(file_name))
 
     try:
         if os.path.exists(file_path):
             logger.info("A file by this name already exists. No action taken.")
-            return jsonify({"status": "file_already_exists"}), 409
+            return jsonify({"result": "file_already_exists"}), 409
         else:
-            logger.info("Now downloading {}...".format(file))
-            target = '{}/mods/{}'.format(app.config['DOWNLOAD_LOCATION'], file)
-            logger.info("Target is {}".format(target))
-            response = requests.get(target, verify=False, timeout=5)
+            logger.info("Now downloading {} from s3...".format(file))
+            
+            s3 = boto3.client('s3', region_name='ap-southeast-2')
+            s3.download_file(
+                Bucket=app.config['DOWNLOAD_BUCKET'],
+                Key=file,
+                Filename=file_path
+            )
 
-            with open(file_path, 'wb') as handle:
-                handle.write(response.content)
-
-            logger.info("Successfully installed")
-            return jsonify({"result": "file_installed"}), 200
+            logger.info("Successfully installed {} to {}".format(file, file_path))
+            return jsonify({"result": "{} has successfully been installed".format(file)}), 200
     except Exception as ex:
         logger.info("An error has occured during installation: {}".format(ex))
-        return jsonify({"result": "an_error_as_occured"}), 500
+        return jsonify({"result": ex}), 500
         
 
 #Standard View 2
@@ -71,29 +75,35 @@ def install():
 def remove():
     file = request.form['mod']
     mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
-    file_path = os.path.join(mod_folder, file)
+    file_name = file[file.rfind('/') + 1:]
+    file_path = os.path.join(mod_folder, file_name)
 
     logger.info("A request has come in to remove {}".format(file))
+    logger.info("Now searching for {}".format(file_name))
 
     try:
         if os.path.exists(file_path):
             os.remove(file_path)
             logger.info("This mod did exist. It has now been removed")
-            return jsonify({"result": "file_removed"}), 200
+            return jsonify({"result": "{} has been removed".format(file)}), 200
 
         logger.info("This mod does not exist. No action taken")
-        return jsonify({"result": "file_not_present"}), 404
+        return jsonify({"result": "Cannot remove {}. File not found".format(file)}), 404
     except Exception as ex:
 
         logger.info("An error has occured during removal: {}".format(ex))
-        return jsonify({"result": "an_error_has_occured"}), 500
+        return jsonify({"result": ex}), 500
 
 
 #Standard View 3
 @app.route('/list-mods/', methods=methods)
 @protect_view
 def mods():
-    return jsonify({'result': server_details.get_mods()}), 200
+    try:
+        return jsonify({'result': server_details.get_mods()}), 200
+    except Exception as ex:
+        print "ERROR {}".format(ex)
+        return jsonify({'result': str(ex)}), 500
 
 
 #Standard View 4

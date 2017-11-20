@@ -3,4 +3,3 @@ boto3==1.4.0
 requests==2.11.1
 supervisor
 flask-cors
-boto
