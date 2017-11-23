@@ -2,10 +2,11 @@ from base import *
 import os
 
 def get_environment_variable(var):
-    pass
+    os.environ.get('MINECRAFT_SERVER_LOCATION')
+
 
 API_METHODS = ['POST']
-MINECRAFT_SERVER_LOCATION = "/apps/mine/server189"
+MINECRAFT_SERVER_LOCATION = get_environment_variable('MINECRAFT_SERVER_LOCATION')
 DEBUG=False
 
 SUPERVISOR_JOB_NAME = 'minecraftserver'
