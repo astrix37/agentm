@@ -2,7 +2,7 @@ from base import *
 import os
 
 def get_environment_variable(var):
-    os.environ.get('MINECRAFT_SERVER_LOCATION')
+    return os.environ.get('MINECRAFT_SERVER_LOCATION')
 
 
 API_METHODS = ['POST']
