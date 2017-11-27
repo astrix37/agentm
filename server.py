@@ -1,35 +1,26 @@
+from libs.configure import configure_application
+app = configure_application()
+
 import boto3
 import json
 import logging
 import os
 import requests
 import sys
+import traceback
 
-from logging import FileHandler 
+from datetime import datetime
 from flask import Flask, render_template, url_for, jsonify, request
-from flask_cors import CORS, cross_origin
+from logging import FileHandler 
 from libs.minecraft_server import MinecraftServer
 from libs.decoraters import protect_view
+from libs.backup import BackupMineCraft
 
-#from supervisor.supervisorctl import *
-#from supervisor.options import ClientOptions
-
-logging.basicConfig(format='%(asctime)s - %(name)-12s - %(levelname)-8s - %(message)s')
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-def configure_application():
-    app = Flask(__name__)
-    app.config.from_object("settings.local" if 'FLASK_SETTINGS_FILE' not in os.environ else os.environ['FLASK_SETTINGS_FILE'])
-    CORS(app)
-
-    return app
-
-app = configure_application()
 server_details = MinecraftServer()
 methods = app.config['API_METHODS']
-
 
 @app.route('/')
 def home():
@@ -65,7 +56,7 @@ def install():
             logger.info("Successfully installed {} to {}".format(file, file_path))
             return jsonify({"result": "{} has successfully been installed".format(file)}), 200
     except Exception as ex:
-        logger.info("An error has occured during installation: {}".format(ex))
+        logger.error(traceback.format_exc())
         return jsonify({"result": str(ex)}), 500
         
 
@@ -90,8 +81,7 @@ def remove():
         logger.info("This mod does not exist. No action taken")
         return jsonify({"result": "Cannot remove {}. File not found".format(file)}), 404
     except Exception as ex:
-
-        logger.info("An error has occured during removal: {}".format(ex))
+        logger.error(traceback.format_exc())
         return jsonify({"result": str(ex)}), 500
 
 
@@ -102,7 +92,7 @@ def mods():
     try:
         return jsonify({'result': server_details.get_mods()}), 200
     except Exception as ex:
-        print "ERROR {}".format(ex)
+        logger.error(traceback.format_exc())
         return jsonify({'result': str(ex)}), 500
 
 
@@ -113,6 +103,7 @@ def list_logs():
     try:
         return jsonify({'result': server_details.list_logs()}), 200
     except Exception as ex:
+        logger.error(traceback.format_exc())
         return jsonify({'result': str(ex)}), 500
 
 
@@ -132,6 +123,46 @@ def get_log():
         
     except Exception as ex:
         return jsonify({'result': str(ex)}), 500
+
+
+#Standard View 6
+@app.route('/create-backup/', methods=methods)
+@protect_view
+def create_backup():
+
+    try:
+        #Naming Vars
+        server_name = request.form['server_name']
+        user_name = request.form['user_name']
+        salt = request.form['salt']
+
+        #Helper Vars
+        template = '{}-{}-{}-{}.tar.gz'
+        timestamp = "{}-{}-{}".format(datetime.now().year, datetime.now().month, datetime.now().day)
+        folder = app.config['TAR_FOLDER']
+
+        #Key Vars
+        source_dir = app.config['MINECRAFT_SERVER_LOCATION']
+        target_file = template.format(server_name, timestamp, user_name, salt)
+        target_file_abs = folder.format(target_file)
+
+        BackupMineCraft(
+            source_dir,
+            target_file,
+            target_file_abs,
+            app.config['BACKUP_BUCKET'],
+            "{}/{}".format(app.config['BUCKET_PREFIX'], target_file),
+            salt,
+            app.config['SERVER']
+        )
+
+        return jsonify({'result': 'Backup initiated. Please check back in a few minutes'}), 200
+
+    except Exception as ex:
+        logger.error(traceback.format_exc())
+        return jsonify({'result': 'Unable to process backup'}), 500
+
+    
 
 
 ##Additional Views Specific to Minecraft
@@ -200,7 +231,6 @@ def command():
         info = supervisor.getProcessInfo(app.config['SUPERVISOR_JOB_NAME'])
 
         sys.stdout = open('/proc/{}/fd/0'.format(info['pid']), 'w')
-        print command_string
         sys.stdout = sys.__stdout__
         logger.info("Command successfully executed")
         return jsonify({"status": "success", "command": command_string}), 200
