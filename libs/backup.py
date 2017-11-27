@@ -45,7 +45,7 @@ class BackupMineCraft(object):
                 s3 = boto3.resource('s3', region_name='ap-southeast-2')
                 bucket = s3.Bucket(bucket)
                 cfg = boto3.s3.transfer.TransferConfig(use_threads=False)
-                bucket.upload_fileobj(data, self.key, ExtraArgs={'ACL': 'public-read'}, Config=cfg)
+                bucket.upload_fileobj(data, self.key, Config=cfg)
 
             logger.info("Removing file")
             os.remove(self.target_file_abs)
