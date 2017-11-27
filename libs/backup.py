@@ -41,20 +41,21 @@ class BackupMineCraft(object):
             created = True
 
             logger.info("Sending to S3")
-            s3 = boto3.client('s3', region_name='ap-southeast-2')  
-            s3.put_object(
-                Bucket=self.bucket, 
-                Key=self.key, 
-                Body=open(self.target_file_abs, 'rb').read()
-            )
+            with open(self.target_file_abs, 'rb') as data:
+                s3 = boto3.resource('s3', region_name='ap-southeast-2')
+                bucket = s3.Bucket(bucket)
+                cfg = boto3.s3.transfer.TransferConfig(use_threads=False)
+                bucket.upload_fileobj(data, self.key, ExtraArgs={'ACL': 'public-read'}, Config=cfg)
 
+            logger.info("Removing file")
             os.remove(self.target_file_abs)
             created = False
 
-            logger.info("Done")
+            logger.info("Success")
             self.respond(True)
 
         except Exception as ex:
+            logger.info("An error has occured")
             logger.info(traceback.format_exc())
             if created:
                 os.remove(self.target_file_abs)
