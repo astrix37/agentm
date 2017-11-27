@@ -4,6 +4,7 @@ import os
 import requests
 import tarfile
 import threading
+import traceback
 import time
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,7 @@ class BackupMineCraft(object):
             self.respond(True)
 
         except Exception as ex:
+            logger.info(traceback.format_exc())
             if created:
                 os.remove(self.target_file_abs)
 
