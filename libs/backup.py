@@ -46,7 +46,7 @@ class BackupMineCraft(object):
             with open(self.target_file_abs, 'rb') as data:
                 s3 = boto3.resource('s3', region_name='ap-southeast-2')
                 bucket = s3.Bucket(self.bucket)
-                cfg = boto3.s3.transfer.TransferConfig(use_threads=False, bugger=True)
+                cfg = boto3.s3.transfer.TransferConfig(use_threads=False)
                 bucket.upload_fileobj(data, self.key, Config=cfg)
 
             self.size = self.file_size()
