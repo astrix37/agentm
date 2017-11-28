@@ -26,6 +26,7 @@ class BackupMineCraft(object):
         self.bucket = bucket
         self.salt = salt
         self.server = server
+        self.size = 0
 
         thread = threading.Thread(target=self.run, args=())
         thread.daemon = True                            # Daemonize thread
@@ -33,6 +34,7 @@ class BackupMineCraft(object):
 
     def run(self):
         created = False
+        size = "ERROR"
 
         try:
             logger.info("Creating backup")
@@ -44,8 +46,10 @@ class BackupMineCraft(object):
             with open(self.target_file_abs, 'rb') as data:
                 s3 = boto3.resource('s3', region_name='ap-southeast-2')
                 bucket = s3.Bucket(self.bucket)
-                cfg = boto3.s3.transfer.TransferConfig(use_threads=False)
+                cfg = boto3.s3.transfer.TransferConfig(use_threads=False, bugger=True)
                 bucket.upload_fileobj(data, self.key, Config=cfg)
+
+            self.size = self.file_size()
 
             logger.info("Removing file")
             os.remove(self.target_file_abs)
@@ -69,8 +73,24 @@ class BackupMineCraft(object):
             timeout=10,
             data={
                 'auth_key': os.environ['KEY'],
+                'size': self.size,
                 'file': self.key,
                 'salt': self.salt,
                 'success': success
             }
         )
+
+    def file_size(self):
+
+        if os.path.isfile(self.target_file_abs):
+            file_name = self.target_file_abs
+            file_info = os.stat(file_name)
+
+            file_bytes = file_info.st_size
+
+            for x in ['bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
+                if file_bytes < 1024.0:
+                    return "%3.1f %s" % (file_bytes, x)
+                file_bytes /= 1024.0
+
+        return "ERR"
