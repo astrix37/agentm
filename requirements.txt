@@ -1,5 +1,5 @@
 Flask==1.1.2
 boto3==1.4.7
-requests==2.11.1
+requests==2.20.0
 supervisor
 flask-cors
