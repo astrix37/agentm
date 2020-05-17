@@ -1,4 +1,4 @@
-from base import *
+from .base import *
 import os
 
 def get_environment_variable(var):
@@ -12,6 +12,7 @@ SERVER = "https://www.cjgamer.com/{}"
 API_METHODS = ['POST']
 MINECRAFT_SERVER_LOCATION = get_environment_variable('MINECRAFT_SERVER_LOCATION')
 DEBUG=False
+MODS_FOLDER = get_environment_variable('MODS_FOLDER')
 
 SUPERVISOR_JOB_NAME = 'minecraftserver'
 SUPERVISOR_SERVER_URL = 'unix:///tmp/supervisor-mine.sock'

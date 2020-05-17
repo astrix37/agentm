@@ -1,5 +1,5 @@
 from libs.configure import configure_application
-app = configure_application()
+app = configure_application(__name__)
 
 import boto3
 import json
@@ -33,7 +33,7 @@ def home():
 @protect_view
 def install():
     file = request.form['mod']
-    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
+    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
     file_name = file[file.rfind('/') + 1:]
     file_path = os.path.join(mod_folder, file_name)
 
@@ -65,7 +65,7 @@ def install():
 @protect_view
 def remove():
     file = request.form['mod']
-    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")
+    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
     file_name = file[file.rfind('/') + 1:]
     file_path = os.path.join(mod_folder, file_name)
 

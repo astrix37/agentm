@@ -67,7 +67,7 @@ class BackupMineCraft(object):
             self.respond(False)
 
     def respond(self, success):
-        requests.post(
+        result = requests.post(
             self.server.format("console/api/create_backup_callback/"), 
             verify=False, 
             timeout=10,
@@ -79,6 +79,7 @@ class BackupMineCraft(object):
                 'success': success
             }
         )
+        logger.info("Callback result: {}".format(result))
 
     def file_size(self):
 

@@ -34,7 +34,10 @@ class MinecraftServer:
 		return json.loads(open(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "config", "bp", "blueprint.json")).read())
 
 	def get_mods(self):
-		return next(os.walk(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "mods")))[2]
+		path = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
+		if not os.path.exists(path):
+			os.mkdir(path)
+		return next(os.walk(path))[2]
 
 	def list_logs(self):
 		return next(os.walk(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], "logs")))[2]
