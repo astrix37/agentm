@@ -1,37 +1,38 @@
-from libs.configure import configure_application
-app = configure_application(__name__)
-
 import boto3
-import json
 import logging
 import os
-import requests
 import sys
 import traceback
+import functools
 
+from flask import (
+    Blueprint, flash, g, redirect, render_template, request, session, url_for
+)
 from datetime import datetime
-from flask import Flask, render_template, url_for, jsonify, request
-from logging import FileHandler 
-from libs.minecraft_server import MinecraftServer
-from libs.decoraters import protect_view
-from libs.backup import BackupMineCraft
+from flask import render_template, jsonify, request, current_app as app
+from flaskr.libs.minecraft_server import MinecraftServer
+from flaskr.libs.decoraters import protect_view
+from flaskr.libs.backup import BackupMineCraft
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
 server_details = MinecraftServer()
 methods = app.config['API_METHODS']
+bp = Blueprint('server', __name__, url_prefix='/')
 
-@app.route('/')
+
+@bp.route('/')
 def home():
     var = {}
     return render_template("index.html", title="Oh, hello", **var)
 
 
-#Standard View 1
-@app.route('/install-mod/', methods=methods)
-@protect_view
+# Standard View 1
+@bp.route('/install-mod/', methods=methods)
 def install():
+    if 'mod' not in request.form:
+        return jsonify({"result": "Missing form data 'mod'"}), 400
+
     file = request.form['mod']
     mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
     file_name = file[file.rfind('/') + 1:]
@@ -45,7 +46,7 @@ def install():
             return jsonify({"result": "file_already_exists"}), 409
         else:
             logger.info("Now downloading {} from s3...".format(file))
-            
+
             s3 = boto3.client('s3', region_name='ap-southeast-2')
             s3.download_file(
                 Bucket=app.config['DOWNLOAD_BUCKET'],
@@ -58,10 +59,10 @@ def install():
     except Exception as ex:
         logger.error(traceback.format_exc())
         return jsonify({"result": str(ex)}), 500
-        
+
 
 #Standard View 2
-@app.route('/remove-mod/', methods=methods)
+@bp.route('/remove-mod/', methods=methods)
 @protect_view
 def remove():
     file = request.form['mod']
@@ -86,7 +87,7 @@ def remove():
 
 
 #Standard View 3
-@app.route('/list-mods/', methods=methods)
+@bp.route('/list-mods/', methods=methods)
 @protect_view
 def mods():
     try:
@@ -97,7 +98,7 @@ def mods():
 
 
 #Standard View 4
-@app.route('/list-logs/', methods=methods)
+@bp.route('/list-logs/', methods=methods)
 @protect_view
 def list_logs():
     try:
@@ -108,25 +109,25 @@ def list_logs():
 
 
 #Standard View 5
-@app.route('/get-log/', methods=methods)
+@bp.route('/get-log/', methods=methods)
 @protect_view
 def get_log():
 
     try:
         logs = server_details.list_logs()
         log_file = request.form['log_file']
-   
+
         if log_file in logs:
             return jsonify({'result': server_details.get_log(log_file)}), 200
         else:
             return jsonify({"result": "log_file_not_found"}), 404
-        
+
     except Exception as ex:
         return jsonify({'result': str(ex)}), 500
 
 
 #Standard View 6
-@app.route('/create-backup/', methods=methods)
+@bp.route('/create-backup/', methods=methods)
 @protect_view
 def create_backup():
 
@@ -162,53 +163,53 @@ def create_backup():
         logger.error(traceback.format_exc())
         return jsonify({'result': 'Unable to process backup'}), 500
 
-    
+
 
 
 ##Additional Views Specific to Minecraft
-@app.route('/ops/', methods=methods)
+@bp.route('/ops/', methods=methods)
 @protect_view
 def ops():
     return jsonify(server_details.get_ops()), 200
 
 
-@app.route('/banned/', methods=methods)
+@bp.route('/banned/', methods=methods)
 @protect_view
 def banned():
     return jsonify(server_details.get_banned_players()), 200
 
 
-@app.route('/properties/', methods=methods)
+@bp.route('/properties/', methods=methods)
 @protect_view
 def properties():
     return jsonify(server_details.get_properties()), 200
 
 
-@app.route('/forge-log/', methods=methods)
+@bp.route('/forge-log/', methods=methods)
 @protect_view
 def forge_log():
     return jsonify(server_details.get_latest_forge_log()), 200
 
 
-@app.route('/general-log/', methods=methods)
+@bp.route('/general-log/', methods=methods)
 @protect_view
 def general_log():
     return jsonify(server_details.get_latest_log()), 200
 
 
-@app.route('/blueprints/', methods=methods)
+@bp.route('/blueprints/', methods=methods)
 @protect_view
 def blueprints():
     return jsonify(server_details.get_blueprints()), 200
 
 
-@app.route('/core-blueprints/', methods=methods)
+@bp.route('/core-blueprints/', methods=methods)
 @protect_view
 def core_blueprints():
     return jsonify(server_details.get_core_blueprints()), 200
 
 
-@app.route('/command/', methods=methods)
+@bp.route('/command/', methods=methods)
 @protect_view
 def command():
     logger.info("A command has come in")
@@ -218,7 +219,7 @@ def command():
 
         if not command[0] in app.config['VALID_COMMANDS']:
             return jsonify({"status": "failure", "command": "Command denied"}), 403
-            
+
         if command[0] == "op" and command_string != "op astrix37":
             return jsonify({"status": "failure", "command": "Command denied for user"}), 403
 
@@ -226,7 +227,7 @@ def command():
         options.realize([], doc=__doc__)
         options.serverurl = app.config['SUPERVISOR_SERVER_URL']
 
-        c = Controller(options)      
+        c = Controller(options)
         supervisor = c.get_supervisor()
         info = supervisor.getProcessInfo(app.config['SUPERVISOR_JOB_NAME'])
 
@@ -237,7 +238,3 @@ def command():
     except Exception as ex:
         logger.info("Command failed: {}".format(ex))
         return jsonify({"status": "failure", "command": str(ex)}), 500
-
-
-if __name__ == '__main__':
-    app.run(threaded=True)

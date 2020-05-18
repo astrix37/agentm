@@ -1,13 +1,8 @@
 from functools import wraps
-from flask import g, request, redirect, url_for
-import datetime
-from math import pow, log
+from flask import request
 import os
 import logging
 import traceback
-
-from logging.config import dictConfig
-from settings.local import LOGGING_CONFIG
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

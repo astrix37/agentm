@@ -19,7 +19,7 @@ LOGGING_CONFIG = {
         'general': {
             'level': 'INFO',
             'class': 'logging.FileHandler',
-            'filename': 'F:\\Dev\\agentm\\general.log',
+            'filename': 'F:\\Dev\\agentm\\logs\\general.log',
             'formatter': 'default'
         },
         'console': {
