@@ -5,7 +5,7 @@ import flaskr
 
 @pytest.fixture
 def client():
-    app = flaskr.create_app(__name__)
+    app = flaskr.create_app()
     db_fd, app.config['DATABASE'] = tempfile.mkstemp()
     app.config['TESTING'] = True
     with app.test_client() as client:
