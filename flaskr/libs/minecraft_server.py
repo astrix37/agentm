@@ -35,8 +35,8 @@ class MinecraftServer:
 
 	def get_mods(self):
 		path = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
-		if not os.path.exists(path):
-			os.mkdir(path)
+if not os.path.exists(path):
+	os.mkdir(path)
 		return next(os.walk(path))[2]
 
 	def list_logs(self):
