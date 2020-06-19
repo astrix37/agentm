@@ -1,22 +1,14 @@
-import boto3
 import logging
 import os
-import sys
-import traceback
-import functools
-
-from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
-)
-from datetime import datetime
-from flask import render_template, jsonify, request, current_app as app
-from flaskr.libs.minecraft_server import MinecraftServer
+import json
+from flask import Blueprint
+from flask import render_template, request, current_app as app
 from flaskr.libs.decoraters import protect_view
-from flaskr.libs.backup import BackupMineCraft
+from flaskr.libs.exceptions import InsufficientDataException, NotFoundException
+from flaskr.libs.minecraft_server import MinecraftCore
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-server_details = MinecraftServer()
 methods = app.config['API_METHODS']
 bp = Blueprint('server', __name__, url_prefix='/')
 
@@ -27,214 +19,122 @@ def home():
     return render_template("index.html", title="Oh, hello", **var)
 
 
-# Standard View 1
-@bp.route('/install-mod/', methods=methods)
-def install():
-    if 'mod' not in request.form:
-        return jsonify({"result": "Missing form data 'mod'"}), 400
-
-    file = request.form['mod']
-    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
-    file_name = file[file.rfind('/') + 1:]
-    file_path = os.path.join(mod_folder, file_name)
-
-    logger.info("A request has come in to install {}".format(file_name))
-
-    try:
-        if os.path.exists(file_path):
-            logger.info("A file by this name already exists. No action taken.")
-            return jsonify({"result": "file_already_exists"}), 409
-        else:
-            logger.info("Now downloading {} from s3...".format(file))
-
-            s3 = boto3.client('s3', region_name='ap-southeast-2')
-            s3.download_file(
-                Bucket=app.config['DOWNLOAD_BUCKET'],
-                Key=file,
-                Filename=file_path
-            )
-
-            logger.info("Successfully installed {} to {}".format(file, file_path))
-            return jsonify({"result": "{} has successfully been installed".format(file)}), 200
-    except Exception as ex:
-        logger.error(traceback.format_exc())
-        return jsonify({"result": str(ex)}), 500
-
-
-#Standard View 2
-@bp.route('/remove-mod/', methods=methods)
-@protect_view
-def remove():
-    file = request.form['mod']
-    mod_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
-    file_name = file[file.rfind('/') + 1:]
-    file_path = os.path.join(mod_folder, file_name)
-
-    logger.info("A request has come in to remove {}".format(file))
-    logger.info("Now searching for {}".format(file_name))
-
-    try:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-            logger.info("This mod did exist. It has now been removed")
-            return jsonify({"result": "{} has been removed".format(file)}), 200
-
-        logger.info("This mod does not exist. No action taken")
-        return jsonify({"result": "Cannot remove {}. File not found".format(file)}), 404
-    except Exception as ex:
-        logger.error(traceback.format_exc())
-        return jsonify({"result": str(ex)}), 500
-
-
-#Standard View 3
-@bp.route('/list-mods/', methods=methods)
-@protect_view
-def mods():
-    try:
-        return jsonify({'result': server_details.get_mods()}), 200
-    except Exception as ex:
-        logger.error(traceback.format_exc())
-        return jsonify({'result': str(ex)}), 500
-
-
-#Standard View 4
-@bp.route('/list-logs/', methods=methods)
-@protect_view
-def list_logs():
-    try:
-        return jsonify({'result': server_details.list_logs()}), 200
-    except Exception as ex:
-        logger.error(traceback.format_exc())
-        return jsonify({'result': str(ex)}), 500
-
-
-#Standard View 5
-@bp.route('/get-log/', methods=methods)
-@protect_view
-def get_log():
-
-    try:
-        logs = server_details.list_logs()
-        log_file = request.form['log_file']
-
-        if log_file in logs:
-            return jsonify({'result': server_details.get_log(log_file)}), 200
-        else:
-            return jsonify({"result": "log_file_not_found"}), 404
-
-    except Exception as ex:
-        return jsonify({'result': str(ex)}), 500
-
-
-#Standard View 6
-@bp.route('/create-backup/', methods=methods)
-@protect_view
+@bp.route('/create_backup/', methods=methods)
+@protect_view(error_response="Error - There was an issue when trying to create a backup")
 def create_backup():
-
-    try:
-        #Naming Vars
-        server_name = request.form['server_name']
-        user_name = request.form['user_name']
-        salt = request.form['salt']
-
-        #Helper Vars
-        template = '{}-{}-{}-{}.tar.gz'
-        timestamp = "{}-{}-{}".format(datetime.now().year, datetime.now().month, datetime.now().day)
-        folder = app.config['TAR_FOLDER']
-
-        #Key Vars
-        source_dir = app.config['MINECRAFT_SERVER_LOCATION']
-        target_file = template.format(server_name, timestamp, user_name, salt)
-        target_file_abs = folder.format(target_file)
-
-        BackupMineCraft(
-            source_dir,
-            target_file,
-            target_file_abs,
-            app.config['BACKUP_BUCKET'],
-            "{}/{}".format(app.config['BUCKET_PREFIX'], target_file),
-            salt,
-            app.config['SERVER']
-        )
-
-        return jsonify({'result': 'Backup initiated. Please check back in a few minutes'}), 200
-
-    except Exception as ex:
-        logger.error(traceback.format_exc())
-        return jsonify({'result': 'Unable to process backup'}), 500
+    result = MinecraftCore.create_backup(request)
+    return result
 
 
+@bp.route('/get_admins/', methods=methods)
+@protect_view(error_response="Error - Unable to get the admin file")
+def get_admins():
+    admin_file_location = "ops.json"
+    file = MinecraftCore.get_file(admin_file_location)
+    return json.loads(file)
 
 
-##Additional Views Specific to Minecraft
-@bp.route('/ops/', methods=methods)
-@protect_view
-def ops():
-    return jsonify(server_details.get_ops()), 200
+@bp.route('/get_file/', methods=methods)
+@protect_view(error_response="Unable to get log")
+def get_file():
+    if 'target_file' not in request.form:
+        raise InsufficientDataException("Missing form data 'log_file'")
+
+    requested_file = request.form['target_file']
+    file = MinecraftCore.get_file(requested_file)
+    return file
 
 
-@bp.route('/banned/', methods=methods)
-@protect_view
-def banned():
-    return jsonify(server_details.get_banned_players()), 200
+@bp.route('/get_log/', methods=methods)
+@protect_view(error_response="Unable to get log")
+def get_log():  #TODO: Sanitize data to logs folder
+    if 'log_file' not in request.form:
+        raise InsufficientDataException("Missing form data 'log_file'")
+
+    logs_folder = "logs"
+    log_file = request.form['log_file']
+    listing = MinecraftCore.list_files(logs_folder)
+    if log_file in listing[2]:
+        path = os.path.join(logs_folder, log_file)
+        return MinecraftCore.get_file(path)
+    raise NotFoundException("{} does not exist or could not be found".format(log_file))
 
 
-@bp.route('/properties/', methods=methods)
-@protect_view
-def properties():
-    return jsonify(server_details.get_properties()), 200
+@bp.route('/get_properties/', methods=methods)
+@protect_view(error_response="Error - Unable to get the properties file")
+def get_properties():
+    file_location = "server.properties"
+    file = MinecraftCore.get_file(file_location)
+    compiled = []
+    for line in file.split('\n'):
+        lines = line.split('=')
+        if len(lines) == 1:
+            compiled.append({"key": lines[0], "value": ''})
+        else:
+            compiled.append({"key": lines[0], "value": lines[1]})
+    return compiled
 
 
-@bp.route('/forge-log/', methods=methods)
-@protect_view
-def forge_log():
-    return jsonify(server_details.get_latest_forge_log()), 200
+@bp.route('/list_files/', methods=methods)
+@protect_view(error_response="Unhandled error - Files could not be listed for the path specified")
+def list_files():
+    if 'path' not in request.form:
+        raise InsufficientDataException("Missing form data 'path'")
+
+    path = request.form['path']
+    listing = MinecraftCore.list_files(path)
+    folders = listing[1]
+    files = listing[2]
+    return {"folders": folders, "files": files}
 
 
-@bp.route('/general-log/', methods=methods)
-@protect_view
-def general_log():
-    return jsonify(server_details.get_latest_log()), 200
+@bp.route('/install_mod/', methods=methods)  # Modify Mod
+@protect_view(error_response="Unhandled error - This file could not be installed")
+def install_mod():  #TODO: Sanitize data
+    if 's3_mod' not in request.form:
+        raise InsufficientDataException("Missing form data 's3_mod'")
+
+    s3_file = request.form['s3_mod']
+    install_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
+    result = MinecraftCore.install(install_folder, s3_file)
+    return result
 
 
-@bp.route('/blueprints/', methods=methods)
-@protect_view
-def blueprints():
-    return jsonify(server_details.get_blueprints()), 200
+@bp.route('/remove_file/', methods=methods)  # Modify Mod
+@protect_view(error_response="Unable to remove file")
+def remove_file():   #TODO: Sanitize data
+    if 'file' not in request.form:
+        raise InsufficientDataException("Missing form data 'file'")
+
+    s3_file = request.form['file']
+    install_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
+    file_name = s3_file[s3_file.rfind('/') + 1:]
+    result = MinecraftCore.delete_file(install_folder, file_name)
+    return result
 
 
-@bp.route('/core-blueprints/', methods=methods)
-@protect_view
-def core_blueprints():
-    return jsonify(server_details.get_core_blueprints()), 200
+@bp.route('/list_mods/', methods=methods)
+@protect_view(error_response="Unable to list available mods")
+def mods():
+    path = app.config['MODS_FOLDER']
+    listing = MinecraftCore.list_files(path)
+    return listing[2]
+
+
+@bp.route('/list_logs/', methods=methods)
+@protect_view(error_response="Unable to list available logs")
+def list_logs():
+    logs_folder = "logs"
+    listing = MinecraftCore.list_files(logs_folder)
+    return listing[2]
 
 
 @bp.route('/command/', methods=methods)
-@protect_view
+@protect_view(error_response="Unable to execute command")
 def command():
-    logger.info("A command has come in")
-    try:
-        command_string = request.form['command']
-        command = command_string.split(' ')
+    if 'command' not in request.form:
+        raise InsufficientDataException("Missing form data 'command'")
 
-        if not command[0] in app.config['VALID_COMMANDS']:
-            return jsonify({"status": "failure", "command": "Command denied"}), 403
-
-        if command[0] == "op" and command_string != "op astrix37":
-            return jsonify({"status": "failure", "command": "Command denied for user"}), 403
-
-        options = ClientOptions()
-        options.realize([], doc=__doc__)
-        options.serverurl = app.config['SUPERVISOR_SERVER_URL']
-
-        c = Controller(options)
-        supervisor = c.get_supervisor()
-        info = supervisor.getProcessInfo(app.config['SUPERVISOR_JOB_NAME'])
-
-        sys.stdout = open('/proc/{}/fd/0'.format(info['pid']), 'w')
-        sys.stdout = sys.__stdout__
-        logger.info("Command successfully executed")
-        return jsonify({"status": "success", "command": command_string}), 200
-    except Exception as ex:
-        logger.info("Command failed: {}".format(ex))
-        return jsonify({"status": "failure", "command": str(ex)}), 500
+    command_string = request.form['command']
+    result = MinecraftCore.command(request, command)
+    return result
