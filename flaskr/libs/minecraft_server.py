@@ -35,9 +35,12 @@ class MinecraftCore:
 	def list_files(folder_path):
 		base_path = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'])
 		target_path = os.path.abspath(os.path.join(base_path, folder_path))
-		if target_path.startswith(base_path):
-			return next(os.walk(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], target_path)))
-		raise NotFoundException("The folder you have requested does not exist")
+		try:
+			if target_path.startswith(base_path):
+				return next(os.walk(os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], target_path)))
+		except Exception:
+			raise NotFoundException("The folder you have requested does not exist.")
+		raise NotFoundException("The folder you have requested does not exist.")
 
 	@staticmethod
 	def delete_file(folder_path, file_name):
