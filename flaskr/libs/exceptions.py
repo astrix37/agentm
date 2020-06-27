@@ -16,3 +16,13 @@ class InsufficientDataException(Exception):
     def __init__(self, message):
         self.message = message
         super().__init__(self.message)
+
+
+class BadDataException(Exception):
+    """
+        Exception raised when the expected form data is missing
+    """
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)

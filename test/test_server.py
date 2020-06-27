@@ -24,7 +24,7 @@ def test_home_page(client):
 def test_no_auth_gives_unauthorized(client):
     expected_status = 401
     endpoints = ['create_backup', 'get_admins', 'get_file', 'get_log', 'get_properties', 'list_files', 'install_mod',
-                 'remove_file', 'list_mods', 'list_logs', 'command']
+                 'delete_file', 'list_mods', 'list_logs', 'command', 'save_file']
     for endpoint in endpoints:
         result = client.post('/{}/'.format(endpoint))
         assert expected_status == result.status_code

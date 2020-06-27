@@ -43,6 +43,16 @@ class MinecraftCore:
 		raise NotFoundException("The folder you have requested does not exist.")
 
 	@staticmethod
+	def save_file(file_name, file_obj):
+		base_path = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'])
+		target_path = os.path.abspath(os.path.join(base_path, file_name))
+		if target_path.startswith(base_path):
+			file_obj.save(target_path)
+			return "File has been saved", 200
+
+		raise NotFoundException("Agent cannot save {}. Invalid location".format(file_name))
+
+	@staticmethod
 	def delete_file(folder_path, file_name):
 		base_path = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'])
 		target_path = os.path.abspath(os.path.join(folder_path, file_name))

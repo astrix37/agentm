@@ -1,8 +1,5 @@
 from .base import *
-import os
 
-def get_environment_variable(var):
-    return os.environ.get(var)
 
 TAR_FOLDER = "/tmp/{}"
 TAR_TEMPLATE = 'minecraft-{}--.tar.gz'

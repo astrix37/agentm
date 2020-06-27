@@ -1,7 +1,7 @@
 from .base import *
 
 API_METHODS = ['GET', 'POST']
-MINECRAFT_SERVER_LOCATION = "F:\Dev\minecraft_servers\server1"
+MINECRAFT_SERVER_LOCATION = get_environment_variable('MINECRAFT_SERVER_LOCATION')
 
 TAR_FOLDER = "F:/Dev/agentm/{}"
 

@@ -3,7 +3,7 @@ from flask import request, jsonify
 import os
 import logging
 import traceback
-from flaskr.libs.exceptions import NotFoundException, InsufficientDataException
+from flaskr.libs.exceptions import NotFoundException, InsufficientDataException, BadDataException
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -39,6 +39,8 @@ class protect_view:
                     logger.info(message)
                     return jsonify({"result": message}), 401
             except InsufficientDataException as ex:
+                return jsonify({"result": ex.message}), 400
+            except BadDataException as ex:
                 return jsonify({"result": ex.message}), 400
             except NotFoundException as ex:
                 return jsonify({"result": ex.message}), 404

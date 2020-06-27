@@ -4,7 +4,7 @@ import json
 from flask import Blueprint
 from flask import render_template, request, current_app as app
 from flaskr.libs.decoraters import protect_view
-from flaskr.libs.exceptions import InsufficientDataException, NotFoundException
+from flaskr.libs.exceptions import InsufficientDataException, NotFoundException, BadDataException
 from flaskr.libs.minecraft_server import MinecraftCore
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def get_admins():
 
 
 @bp.route('/get_file/', methods=methods)
-@protect_view(error_response="Unable to get log")
+@protect_view(error_response="An error occured while trying to read this file")
 def get_file():
     if 'target_file' not in request.form:
         raise InsufficientDataException("Missing form data 'log_file'")
@@ -43,6 +43,19 @@ def get_file():
     requested_file = request.form['target_file']
     file = MinecraftCore.get_file(requested_file)
     return file
+
+
+@bp.route('/save_file/', methods=methods)
+@protect_view(error_response="An error occured while trying to save this file")
+def save_file():
+    if 'input' not in request.files:
+        raise InsufficientDataException("Missing form file 'input'")
+
+    file_name = request.form['file_name']
+    file_obj = request.files['input']
+    logger.info(file_name)
+    MinecraftCore.save_file(file_name, file_obj)
+    return "File has been save successfully"
 
 
 @bp.route('/get_log/', methods=methods)
@@ -100,16 +113,26 @@ def install_mod():  #TODO: Sanitize data
     return result
 
 
-@bp.route('/remove_file/', methods=methods)  # Modify Mod
+@bp.route('/delete_file/', methods=methods)  # Modify Mod
 @protect_view(error_response="Unable to remove file")
-def remove_file():   #TODO: Sanitize data
+def delete_file():
     if 'file' not in request.form:
         raise InsufficientDataException("Missing form data 'file'")
+    if 'plugin' in request.form and 'path' in request.form:
+        raise BadDataException("You can provide 'plugin' or 'path' but not both")
+    if 'plugin' not in request.form and 'path' not in request.form:
+        raise InsufficientDataException("Please specify 'plugin' if this is a plugin, or 'path' to specify delete path")
 
-    s3_file = request.form['file']
-    install_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
-    file_name = s3_file[s3_file.rfind('/') + 1:]
-    result = MinecraftCore.delete_file(install_folder, file_name)
+    if 'plugin' in request.form:
+        s3_file = request.form['file']
+        target_file = s3_file[s3_file.rfind('/') + 1:]
+        install_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], app.config['MODS_FOLDER'])
+    else:
+        path = request.form['path']
+        target_file = request.form['file']
+        install_folder = os.path.join(app.config['MINECRAFT_SERVER_LOCATION'], path)
+
+    result = MinecraftCore.delete_file(install_folder, target_file)
     return result
 
 
