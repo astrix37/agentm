@@ -1,6 +1,6 @@
 Flask==1.1.2
 boto3==1.4.7
-requests==2.20
+requests==2.31.0
 supervisor
 flask-cors
 pytest==5.4.2
